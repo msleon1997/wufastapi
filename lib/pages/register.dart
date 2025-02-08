@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:wufastpay/services/conexion.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -14,30 +17,51 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _telefonoController = TextEditingController();
 
-  void _registrar() {
-    if (_formKey.currentState!.validate()) {
+  final ApiService _apiService = ApiService();
 
 
-      final nombre = _nombreController.text;
-      final email = _emailController.text;
-      final password = _passwordController.text;
-      final telefono = _telefonoController.text;
 
-      print('Nombre: $nombre');
-      print('Email: $email');
-      print('Contraseña: $password');
-      print('Teléfono: $telefono');
+void _registrar() async {
+  if (_formKey.currentState!.validate()) {
+    final nombre = _nombreController.text;
+    final email = _emailController.text;
+    final password = _passwordController.text;
+    final telefono = _telefonoController.text;
 
-      // Navegar a la página de login después del registro
+
+    final usuario = {
+      'nombre': nombre,
+      'email': email,
+      'password_hash': password,
+      'telefono': telefono,
+      'activo': true,                  
+    };
+
+    // Mostrar la data en la consola antes de enviarla
+   print('Datos a enviar: ${jsonEncode(usuario)}');
+
+
+    try {
+      await _apiService.registrarUsuario(usuario);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Usuario registrado exitosamente')),
+      );
+
       Navigator.pushReplacementNamed(context, '/login');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
     }
   }
+}
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-       // title: const Text('Registro'),
+        // title: const Text('Registro'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
