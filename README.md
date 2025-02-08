@@ -1,2 +1,2 @@
-# wufastapi
+# wufastapp
 api de wu
