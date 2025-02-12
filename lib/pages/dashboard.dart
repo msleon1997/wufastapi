@@ -7,10 +7,13 @@ import 'package:http/http.dart' as http;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
+  
 
   @override
   _DashboardPageState createState() => _DashboardPageState();
+  
 }
+int _selectedIndex = 0;
 
 class _DashboardPageState extends State<DashboardPage> {
   String? _token;
@@ -192,7 +195,7 @@ Future<void> _obtenerDatosUsuario(String token) async {
                         Text(
                           _correo!,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: 10,
                             color: Color.fromARGB(255, 0, 0, 0),
                           ),
                         ),
@@ -278,6 +281,34 @@ Future<void> _obtenerDatosUsuario(String token) async {
           ],
         ),
       ),
+      bottomNavigationBar: BottomNavigationBar(
+      currentIndex: _selectedIndex, 
+      onTap: (index) {
+        setState(() {
+          _selectedIndex = index;
+        });
+
+        switch (index) {
+          case 0:
+            Navigator.pushReplacementNamed(context, '/dashboard');
+            break;
+          case 1:
+            Navigator.pushReplacementNamed(context, '/productos');
+            break;
+          case 2:
+            Navigator.pushReplacementNamed(context, '/perfil');
+            break;
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: "Inicio"),
+        BottomNavigationBarItem(icon: Icon(Icons.folder), label: "Mis productos"),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: "Perfil"),
+      ],
+      selectedItemColor: Colors.blue, 
+      unselectedItemColor: Colors.grey, 
+      showUnselectedLabels: true,
+    ),
     );
     
   }
