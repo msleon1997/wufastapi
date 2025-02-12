@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../providers/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -45,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    final url = Uri.parse('http://localhost:5225/api/USUARIOS/login'); 
+    final url = Uri.parse('http://localhost:5225/api/USUARIOS/login');
     final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({"email": email, "password_hash": password});
 
@@ -59,6 +62,8 @@ class _LoginPageState extends State<LoginPage> {
         // Guardar el token en SharedPreferences
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setString('auth_token', token);
+
+        await Provider.of<AppProvider>(context, listen: false).setToken(token);
 
         print('Token guardado: $token');
 

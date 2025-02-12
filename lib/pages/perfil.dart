@@ -365,7 +365,20 @@ class _PerfilPagelState extends State<PerfilPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('WU FastPay')),
+      appBar: AppBar(
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/logowu.png', 
+              height: 40,
+              
+            ),
+            const SizedBox(width: 10), 
+            const Text('WU FastPay'),
+            
+          ],
+        ),
+      ),
       body: Column(
         children: [
           Expanded(child: _buildListaCuentas()),

@@ -1,8 +1,10 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:wufastpay/providers/provider.dart';
 
 
 class DashboardPage extends StatefulWidget {
@@ -17,20 +19,18 @@ int _selectedIndex = 0;
 
 class _DashboardPageState extends State<DashboardPage> {
   String? _token;
-  double _saldo = 1500.0; // Saldo de ejemplo
+  double? _saldo;
   String? _nombre;
   String? _correo;
   String? _telefono;
-  final List<Map<String, dynamic>> _transacciones = [
-    {'tipo': 'Enviado', 'monto': 100.0, 'destinatario': 'Juan Pérez', 'fecha': '2023-10-01'},
-    {'tipo': 'Recibido', 'monto': 50.0, 'destinatario': 'Ana Gómez', 'fecha': '2023-10-02'},
-    {'tipo': 'Enviado', 'monto': 200.0, 'destinatario': 'Carlos Ruiz', 'fecha': '2023-10-03'},
-  ];
+  List<Map<String, dynamic>> _transacciones = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _cargarToken();
+    _cargarTransacciones();
   }
 
 Future<int?> obtenerUserIdDesdeToken(String token) async {
@@ -92,24 +92,105 @@ Future<void> _obtenerDatosUsuario(String token) async {
   }
 }
 
+Future<void> _obtenerSaldo(String token) async {
+  try {
+    final userId = await obtenerUserIdDesdeToken(token);
+    print("User ID obtenido: $userId"); // Debug
+
+    if (userId != null) {
+      final response = await http.get(
+        Uri.parse('http://localhost:5225/api/CUENTAS'), // Obtener TODAS las cuentas
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> cuentas = jsonDecode(response.body);
+        
+        // Filtrar solo las cuentas del usuario actual
+        double saldoTotal = 0.0;
+        for (var cuenta in cuentas) {
+          if (cuenta['user_id'] == userId) {
+            saldoTotal += cuenta['saldo'].toDouble();
+          }
+        }
+
+        setState(() {
+          _saldo = saldoTotal;
+        });
+
+        print("Saldo total calculado: $_saldo"); // Debug
+      } else {
+        print('Error al obtener el saldo: ${response.statusCode}');
+      }
+    }
+  } catch (e) {
+    print('Error al obtener saldo: $e');
+  }
+}
 
 
 
-
-  /// Cargar el token almacenado
-  Future<void> _cargarToken() async {
+ Future<void> _cargarToken() async {
   SharedPreferences prefs = await SharedPreferences.getInstance();
   setState(() {
     _token = prefs.getString('auth_token');
   });
-  print('Token cargado: $_token'); // Agregar para depuración
+  print('Token cargado: $_token'); 
+
   if (_token != null) {
     _obtenerDatosUsuario(_token!);
+    _obtenerSaldo(_token!);
   } else {
     print('No se encontró token');
   }
 }
 
+
+
+Future<void> _cargarTransacciones() async {
+    final String apiUrl = "http://localhost:5225/api/TRANSACCIONES";
+    final String? token = Provider.of<AppProvider>(context, listen: false).token;
+
+    try {
+      final response = await http.get(
+        Uri.parse(apiUrl),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token"
+        },
+      );
+
+      if (response.statusCode == 200) {
+        List<dynamic> data = jsonDecode(response.body);
+
+        setState(() {
+          _transacciones = data.map((item) => {
+            'pais': item['pais'],
+            'monto': item['monto'],
+            'fecha': _formatearFecha(item['fecha']),
+          }).toList();
+          _isLoading = false;
+        });
+      } else {
+        throw Exception("Error al cargar transacciones");
+      }
+    } catch (e) {
+      print("Error: $e");
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  String _formatearFecha(String fechaISO) {
+    DateTime fecha = DateTime.parse(fechaISO);
+    return "${fecha.day}/${fecha.month}/${fecha.year} ${fecha.hour}:${fecha.minute}";
+  }
+
+  
 
 
   /// Cerrar sesión y eliminar el token
@@ -129,11 +210,23 @@ Future<void> _obtenerDatosUsuario(String token) async {
     }
     return Scaffold(
       appBar: AppBar(
-        title: const Text('WU FastPay'),
+        title: Row(
+          children: [
+            Image.asset(
+              'assets/images/logowu.png', 
+              height: 40,
+            ),
+            const SizedBox(width: 10), 
+            const Text('WU FastPay'),
+          ],
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: cerrarSesion,
+            icon: const Icon(Icons.exit_to_app, color: Color.fromARGB(255, 0, 0, 0)),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () {
+              cerrarSesion();
+            },
           ),
         ],
       ),
@@ -167,7 +260,7 @@ Future<void> _obtenerDatosUsuario(String token) async {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '\$${_saldo.toStringAsFixed(2)}',
+                        _saldo != null ? '\$${_saldo!.toStringAsFixed(2)}' : 'Cargando...',
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -234,7 +327,7 @@ Future<void> _obtenerDatosUsuario(String token) async {
                   Navigator.pushNamed(context, '/transferir');
                 }),
                 _buildActionButton(Icons.account_balance_wallet, 'Recargar', Colors.green, () {
-                  Navigator.pushNamed(context, '/recargar');
+                  Navigator.pushNamed(context, '/perfil');
                 }),
                 _buildActionButton(Icons.history, 'Historial', Colors.orange, () {
                   Navigator.pushNamed(context, '/historial');
@@ -252,32 +345,40 @@ Future<void> _obtenerDatosUsuario(String token) async {
               ),
             ),
             const SizedBox(height: 10),
+            
             ListView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: _transacciones.length,
+              itemCount: _transacciones.length, 
               itemBuilder: (context, index) {
                 final transaccion = _transacciones[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 4),
                   child: ListTile(
-                    leading: Icon(
-                      transaccion['tipo'] == 'Enviado' ? Icons.arrow_upward : Icons.arrow_downward,
-                      color: transaccion['tipo'] == 'Enviado' ? Colors.red : Colors.green,
-                    ),
-                    title: Text(transaccion['destinatario']),
-                    subtitle: Text(transaccion['fecha']),
-                    trailing: Text(
-                      '\$${transaccion['monto'].toStringAsFixed(2)}',
-                      style: TextStyle(
-                        color: transaccion['tipo'] == 'Enviado' ? Colors.red : Colors.green,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    title: Text(transaccion['pais']),  
+                    subtitle: Text(transaccion['fecha']),  
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,  
+                      children: [
+                        Text(
+                          '\$${transaccion['monto'].toStringAsFixed(2)}',  
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Icon(
+                          Icons.arrow_downward,  
+                          color: Color.fromARGB(255, 255, 2, 2),  
+                        ),
+                      ],
                     ),
                   ),
                 );
               },
-            ),
+            )
+
+
+
           ],
         ),
       ),

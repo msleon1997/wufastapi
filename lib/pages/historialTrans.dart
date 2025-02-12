@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 
-class ProductosPage extends StatefulWidget {
-  const ProductosPage({super.key});
+class HistorialPage extends StatefulWidget {
+  const HistorialPage({super.key});
 
   @override
-  State<ProductosPage> createState() => _ProductosPageState();
+  State<HistorialPage> createState() => _HistorialPageState();
 }
 int _selectedIndex = 0;
-class _ProductosPageState extends State<ProductosPage> {
+
+class _HistorialPageState extends State<HistorialPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
